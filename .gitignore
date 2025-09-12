@@ -1,0 +1,17 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Environments
+.env
+.venv/
+venv/
+env/
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
