@@ -1,0 +1,96 @@
+{
+  "categories": {
+    "produce": {
+      "name": "Produce", 
+      "location": "Front-Right"
+    },
+    "dairy": {
+      "name": "Dairy", 
+      "location": "Back-Left"
+    },
+    "bakery": {
+      "name": "Bakery", 
+      "location": "Front-Center"
+    },
+    "meat": {
+      "name": "Meat & Poultry", 
+      "location": "Back-Center"
+    },
+    "pantry": {
+      "name": "Pantry", 
+      "location": "Center-Aisles"
+    },
+    "beverages": {
+      "name": "Beverages", 
+      "location": "Back-Right"
+    },
+    "frozen": {
+      "name": "Frozen", 
+      "location": "Back-Wall"
+    },
+    "snacks": {
+      "name": "Snacks", 
+      "location": "Front-Aisles"
+    }
+  },
+  "items": [
+    {"name": "Bananas", "category": "produce"},
+    {"name": "Apples", "category": "produce"},
+    {"name": "Oranges", "category": "produce"},
+    {"name": "Lettuce", "category": "produce"},
+    {"name": "Tomatoes", "category": "produce"},
+    {"name": "Onions", "category": "produce"},
+    {"name": "Potatoes", "category": "produce"},
+    {"name": "Carrots", "category": "produce"},
+    
+    {"name": "Milk", "category": "dairy"},
+    {"name": "Eggs", "category": "dairy"},
+    {"name": "Cheese", "category": "dairy"},
+    {"name": "Yogurt", "category": "dairy"},
+    {"name": "Butter", "category": "dairy"},
+    {"name": "Greek Yogurt", "category": "dairy"},
+    {"name": "Cream Cheese", "category": "dairy"},
+    
+    {"name": "Bread", "category": "bakery"},
+    {"name": "Bagels", "category": "bakery"},
+    {"name": "Muffins", "category": "bakery"},
+    {"name": "Croissants", "category": "bakery"},
+    {"name": "Donuts", "category": "bakery"},
+    
+    {"name": "Chicken Breast", "category": "meat"},
+    {"name": "Ground Beef", "category": "meat"},
+    {"name": "Salmon", "category": "meat"},
+    {"name": "Turkey Slices", "category": "meat"},
+    {"name": "Bacon", "category": "meat"},
+    
+    {"name": "Rice", "category": "pantry"},
+    {"name": "Pasta", "category": "pantry"},
+    {"name": "Cereal", "category": "pantry"},
+    {"name": "Instant Noodles", "category": "pantry"},
+    {"name": "Canned Beans", "category": "pantry"},
+    {"name": "Peanut Butter", "category": "pantry"},
+    {"name": "Olive Oil", "category": "pantry"},
+    {"name": "Salt", "category": "pantry"},
+    {"name": "Sugar", "category": "pantry"},
+    
+    {"name": "Coffee", "category": "beverages"},
+    {"name": "Energy Drinks", "category": "beverages"},
+    {"name": "Water Bottles", "category": "beverages"},
+    {"name": "Orange Juice", "category": "beverages"},
+    {"name": "Soda", "category": "beverages"},
+    {"name": "Tea", "category": "beverages"},
+    
+    {"name": "Pizza", "category": "frozen"},
+    {"name": "Ice Cream", "category": "frozen"},
+    {"name": "Frozen Vegetables", "category": "frozen"},
+    {"name": "Frozen Berries", "category": "frozen"},
+    {"name": "Ice Cubes", "category": "frozen"},
+    
+    {"name": "Chips", "category": "snacks"},
+    {"name": "Cookies", "category": "snacks"},
+    {"name": "Crackers", "category": "snacks"},
+    {"name": "Granola Bars", "category": "snacks"},
+    {"name": "Nuts", "category": "snacks"},
+    {"name": "Candy", "category": "snacks"}
+  ]
+}

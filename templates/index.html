@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Paws & Go Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff; color: #000000; min-height: 100vh;
+        }
+
+        .header {
+    background:#ffffff;
+    border-bottom:1px solid #e5e5e5;
+    padding:1rem;
+    display:flex;                 /* make header flex */
+    align-items:center;           /* vertical centering */
+    justify-content:space-between;/* title left, mode right */
+    position:sticky;
+    top:0;
+    z-index:100;
+}
+
+.header h1 {
+    font-size:1.5rem;
+    font-weight:600;
+    color:#000000;
+    margin:0;
+}
+
+        .mode-indicator {
+            background:#000; color:#fff; padding:.4rem 1rem; border-radius:4px;
+            font-size:.8rem; margin-top:.5rem; display:inline-block; font-weight:500;
+        }
+        .mode-indicator.helper { background:#000; }
+
+        .search-container {
+            padding:1rem; background:#fff; border-bottom:1px solid #e5e5e5;
+        }
+        .search-input {
+            width:100%; padding:.8rem 1.2rem; background:#fff; border:1px solid #d4d4d4;
+            border-radius:4px; font-size:1rem; transition:border-color .2s ease;
+        }
+        .search-input:focus { outline:none; border-color:#000; }
+
+        .items-container {
+            max-height: calc(100vh - 160px);
+            overflow-y:auto; -webkit-overflow-scrolling:touch; padding:1rem;
+        }
+        .item {
+            background:#fff; border:1px solid #e5e5e5; border-radius:4px;
+            margin-bottom:.7rem; padding:1rem; display:flex; justify-content:space-between; align-items:center;
+            transition:border-color .2s ease;
+        }
+        .item:hover { border-color:#000; }
+        .item:last-child { margin-bottom:0; }
+
+        .item-left { display:flex; align-items:center; gap:.8rem; flex-grow:1; }
+        .status-indicator {
+    width: 28px;       /* bigger circle */
+    height: 28px;
+    border-radius: 50%;
+    background: #f5f5f5;
+    border: 2px solid #d4d4d4;  /* slightly thicker border */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;  /* bolder symbol */
+    font-size: 1rem;   /* bigger check/x */
+    color: #000000;
+    flex-shrink: 0;
+}
+        .status-indicator.available { background:#fff; border:1px solid #000; color:#000; }
+        .status-indicator.unavailable { background:#000; border:1px solid #000; color:#fff; }
+        .status-indicator.unknown { background:#f5f5f5; border:1px solid #d4d4d4; color:#999; }
+
+        .item-name { font-size:1rem; font-weight:400; color:#000; flex-grow:1; }
+        .item-meta { font-size:.85rem; color:#666; }
+
+        .item-actions { display:flex; gap:.5rem; align-items:center; }
+        .ask-btn {
+            padding:.5rem 1rem; background:#000; color:#fff; border:1px solid #000; border-radius:4px;
+            font-size:.85rem; font-weight:500; cursor:pointer; transition:all .2s ease;
+        }
+        .ask-btn:hover { background:#fff; color:#000; }
+        .ask-btn:active { transform:scale(.98); }
+
+        .helper-controls { display:flex; gap:.4rem; }
+        .status-btn {
+            width:40px; height:36px; border:1px solid #000; border-radius:4px; font-size:.9rem; font-weight:500;
+            cursor:pointer; transition:all .2s ease; display:flex; align-items:center; justify-content:center;
+            background:#fff; color:#000;
+        }
+        .status-btn:hover { background:#000; color:#fff; }
+        .status-btn:active { transform:scale(.98); }
+
+        .notification {
+            position:fixed; top:100px; left:1rem; right:1rem;
+            background:#000; color:#fff; padding:1rem; border-radius:4px; z-index:1000;
+            transform:translateY(-100px); opacity:0; transition:all .3s ease; font-weight:500; text-align:center; border:1px solid #000;
+        }
+        .notification.show { transform:translateY(0); opacity:1; }
+        .notification.success { background:#000; color:#fff; }
+        .notification.info { background:#000; color:#fff; }
+        .notification.error { background:#fff; color:#000; border:1px solid #000; }
+        .notification.info.clickable { cursor:pointer; text-decoration:underline; }
+
+        .empty-state, .loading {
+            text-align:center; padding:3rem 1rem; color:#999; font-size:1rem; font-weight:400;
+        }
+
+        /* Smooth scrolling */
+        .items-container::-webkit-scrollbar { width:6px; }
+        .items-container::-webkit-scrollbar-track { background:#f5f5f5; }
+        .items-container::-webkit-scrollbar-thumb { background:#d4d4d4; border-radius:3px; }
+        .items-container::-webkit-scrollbar-thumb:hover { background:#999; }
+
+        /* ---- Modal ---- */
+        .modal-backdrop {
+            position:fixed; inset:0; background:rgba(0,0,0,.35);
+            display:none; align-items:center; justify-content:center; z-index:2000;
+        }
+        .modal-backdrop.show { display:flex; }
+        .modal {
+            width:min(520px, 92vw); background:#fff; border:1px solid #000; border-radius:8px;
+            box-shadow:0 10px 30px rgba(0,0,0,.2); overflow:hidden;
+        }
+        .modal-header {
+            padding:1rem 1.25rem; border-bottom:1px solid #e5e5e5;
+            display:flex; align-items:center; justify-content:space-between;
+        }
+        .modal-title { font-weight:600; }
+        .modal-close { background:transparent; border:0; font-size:1.1rem; cursor:pointer; }
+        .modal-body { padding:1rem 1.25rem; }
+        .modal-actions {
+            display:flex; gap:.5rem; justify-content:flex-end; padding:.9rem 1.25rem; border-top:1px solid #e5e5e5;
+        }
+        .btn {
+            padding:.55rem .9rem; border:1px solid #000; border-radius:6px; cursor:pointer;
+            background:#fff; color:#000; font-weight:500;
+        }
+        .btn:hover { background:#000; color:#fff; }
+        .btn.primary { background:#000; color:#fff; }
+        .btn.primary:hover { background:#fff; color:#000; }
+
+        /* ---- Map (SVG) ---- */
+        .map-wrap { border:1px solid #e5e5e5; border-radius:6px; padding:.75rem; }
+        .store-map text { font-size:12px; fill:#000; }
+        .map-section { fill:#f8f8f8; stroke:#cfcfcf; }
+        .map-section.highlight { fill:#000; stroke:#000; }
+        .map-section.highlight + text { fill:#fff; font-weight:600; }
+
+        /* Mobile tweaks */
+        @media (max-width:480px) {
+            .header { padding:.8rem; }
+            .header h1 { font-size:1.3rem; }
+            .search-container { padding:.8rem; }
+            .item { padding:.8rem; margin-bottom:.5rem; }
+            .item-name { font-size:.95rem; }
+           .status-indicator {
+        width: 24px;
+        height: 24px;
+        font-size: 0.9rem;
+    }
+            .ask-btn { padding:.4rem .8rem; font-size:.8rem; }
+            .status-btn { width:36px; height:32px; }
+            .search-input { padding:.7rem 1rem; font-size:.95rem; }
+        }
+
+        .search-row {
+  display: grid;
+  grid-template-columns: 1fr 160px;
+  gap: .6rem;
+}
+
+.category-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: #fff;
+  border: 1px solid #d4d4d4;
+  border-radius: 4px;
+  padding: .68rem .9rem;
+  font-size: .95rem;
+  color: #000;
+  cursor: pointer;
+}
+.category-select:focus { outline: none; border-color: #000; }
+
+/* Mobile: stack search + picker */
+@media (max-width: 480px) {
+  .search-row {
+    grid-template-columns: 1fr;
+  }
+}
+    </style>
+
+    <script>
+  // ... your existing globals ...
+  let selectedCategory = localStorage.getItem('paws_category') || '';
+
+  // (already defined) FALLBACK_CATEGORY and CATEGORY_TO_RECT_ID
+
+  document.addEventListener('DOMContentLoaded', function() {
+      socket.emit('join_mode', { mode: mode, user_id: userId });
+      // attach listeners
+      document.getElementById('searchInput').addEventListener('input', function() {
+          clearTimeout(searchTimeout);
+          searchTimeout = setTimeout(loadItems, 200);
+      });
+      document.getElementById('categorySelect').addEventListener('change', function(e) {
+          selectedCategory = e.target.value || '';
+          localStorage.setItem('paws_category', selectedCategory);
+          renderItems(); // re-render with new filter (no need to refetch)
+      });
+
+      loadItems();
+  });
+
+  // Build category options from items (with fallback if needed)
+  function populateCategoryPicker() {
+      const select = document.getElementById('categorySelect');
+      const categories = new Set();
+
+      // collect categories
+      Object.values(items).forEach(it => {
+          let cat = it.category;
+          if (!cat) {
+              const guess = FALLBACK_CATEGORY[it.name.toLowerCase()];
+              if (guess) cat = guess;
+          }
+          if (cat) categories.add(cat);
+      });
+
+      // keep "All" at top, then sorted categories
+      const current = selectedCategory;
+      select.innerHTML = '<option value="">All</option>' +
+          Array.from(categories).sort().map(c => {
+              const sel = (c === current) ? ' selected' : '';
+              return `<option value="${c}"${sel}>${c}</option>`;
+          }).join('');
+  }
+
+  // Load items (unchanged), then populate picker
+  function loadItems() {
+      const search = document.getElementById('searchInput').value;
+      fetch(`/api/items?search=${encodeURIComponent(search)}`)
+          .then(response => response.json())
+          .then(data => {
+              items = data;
+              populateCategoryPicker();   // << add this
+              renderItems();
+          })
+          .catch(() => {
+              itemsContainer.innerHTML = '<div class="empty-state">Could not load items.</div>';
+          });
+  }
+
+  // Render items with category filter + alpha sort
+  function renderItems() {
+      const container = itemsContainer;
+      // filter by category if chosen
+      let entries = Object.entries(items).map(([key, it]) => {
+          // derive category if missing
+          const cat = it.category || FALLBACK_CATEGORY[it.name.toLowerCase()] || '';
+          return [key, {...it, _cat: cat}];
+      });
+
+      if (selectedCategory) {
+          entries = entries.filter(([, it]) => it._cat === selectedCategory);
+      }
+
+      // alpha sort by name within the filtered set
+      entries.sort((a, b) => a[1].name.localeCompare(b[1].name));
+
+      if (entries.length === 0) {
+          container.innerHTML = '<div class="empty-state">No items found</div>';
+          return;
+      }
+
+      const html = entries.map(([key, item]) => {
+          let statusClass = 'unknown', statusSymbol = '?';
+          if (item.available === true) { statusClass = 'available'; statusSymbol = '✓'; }
+          else if (item.available === false) { statusClass = 'unavailable'; statusSymbol = '✗'; }
+
+          const meta = item.category
+  ? `<div class="item-meta">${item.category}</div>`
+  : '';
+
+          const actions = (mode === 'helper')
+              ? `<div class="helper-controls">
+                   <button class="status-btn available" onclick="updateStatus('${key}', true)">✓</button>
+                   <button class="status-btn unavailable" onclick="updateStatus('${key}', false)">✗</button>
+                 </div>`
+              : `<button class="ask-btn" onclick="askForItem('${key}', this)">Ask</button>`;
+
+          return `
+            <div class="item">
+              <div class="item-left">
+                <div class="status-indicator ${statusClass}">${statusSymbol}</div>
+                <div>
+                  <div class="item-name">${item.name}</div>
+                  ${meta}
+                </div>
+              </div>
+              <div class="item-actions">${actions}</div>
+            </div>
+          `;
+      }).join('');
+
+      container.innerHTML = html;
+  }
+</script>
+
+</head>
+
+    <div class="header">
+        <h1>Paws Crowdsourced</h1>
+        <div class="mode-indicator {{ 'helper' if mode == 'helper' else '' }}" id="modeIndicator">
+            {{ mode.title() }} Mode
+        </div>
+    </div>
+
+<body>
+    <div class="search-container">
+  <div class="search-row">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search items..." />
+
+    <!--
+        <select id="categorySelect" class="category-select" aria-label="Filter by category">
+      <option value="">All</option>
+    </select>
+-->
+  </div>
+</div>
+
+    <div class="items-container" id="itemsContainer">
+        <div class="loading">Loading items...</div>
+    </div>
+
+    <div class="notification" id="notification"></div>
+
+    <!-- Modal: helper request popup -->
+    <div class="modal-backdrop" id="requestModalBackdrop" role="dialog" aria-modal="true">
+      <div class="modal" id="requestModal">
+        <div class="modal-header">
+          <div class="modal-title" id="modalTitle">New Request</div>
+          <button class="modal-close" onclick="closeRequestModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="modalItemName" style="font-size:1.05rem; margin-bottom:.6rem; font-weight:600;"></div>
+          <div style="color:#666; margin-bottom:.75rem;">Please check the shelf and update the status.</div>
+
+          <div class="map-wrap">
+            <!-- Simple rectangular store map (front at top). -->
+            <svg class="store-map" id="storeMap" viewBox="0 0 600 360" width="100%" height="220">
+              <!-- Row 1 (Front) -->
+              <rect id="map-Bakery" class="map-section" x="20"  y="20"  width="170" height="90" rx="6"></rect>
+              <text x="35" y="70">Bakery · Front-Center</text>
+
+              <rect id="map-Produce" class="map-section" x="210" y="20"  width="170" height="90" rx="6"></rect>
+              <text x="225" y="70">Produce · Front-Right</text>
+
+              <rect id="map-Snacks" class="map-section" x="400" y="20"  width="170" height="90" rx="6"></rect>
+              <text x="415" y="70">Snacks · Front-Aisles</text>
+
+              <!-- Row 2 (Center/Back-Center) -->
+              <rect id="map-Pantry" class="map-section" x="20"  y="130" width="260" height="90" rx="6"></rect>
+              <text x="35" y="180">Pantry · Center-Aisles</text>
+
+              <rect id="map-Meat & Poultry" class="map-section" x="300" y="130" width="270" height="90" rx="6"></rect>
+              <text x="315" y="180">Meat & Poultry · Back-Center</text>
+
+              <!-- Row 3 (Back) -->
+              <rect id="map-Beverages" class="map-section" x="20"  y="240" width="170" height="90" rx="6"></rect>
+              <text x="35" y="290">Beverages · Back-Right</text>
+
+              <rect id="map-Dairy" class="map-section" x="210" y="240" width="170" height="90" rx="6"></rect>
+              <text x="225" y="290">Dairy · Back-Left</text>
+
+              <rect id="map-Frozen" class="map-section" x="400" y="240" width="170" height="90" rx="6"></rect>
+              <text x="415" y="290">Frozen · Back-Wall</text>
+            </svg>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn" onclick="submitRequestAnswer(false)">✗ Not Available</button>
+          <button class="btn primary" onclick="submitRequestAnswer(true)">✓ Available</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+
+        // ---- Haptics + sound ----
+let audioCtx = null;
+
+function initAudioIfNeeded() {
+  // Create/resume AudioContext on first user gesture to satisfy autoplay policies
+  if (!audioCtx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) audioCtx = new AC();
+  }
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+// Call on any click/touch to unlock audio
+window.addEventListener('click', initAudioIfNeeded, { once: false });
+window.addEventListener('touchstart', initAudioIfNeeded, { once: false });
+
+function playDing() {
+  if (!audioCtx) return; // will play once user has interacted
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(880, audioCtx.currentTime);     // A5
+  gain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.25, audioCtx.currentTime + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.20);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.21);
+}
+
+function vibrate() {
+  if (navigator.vibrate) {
+    navigator.vibrate(40); // short 40ms tap
+  }
+}
+
+function notifyUserAttention() {
+  vibrate();
+  playDing();
+}
+
+// cut off here for script
+
+        const mode = '{{ mode }}';
+        const socket = io();
+        const itemsContainer = document.getElementById('itemsContainer');
+
+        // Stable anonymous user ID
+        function getOrCreateId() {
+          try {
+            let id = localStorage.getItem('paws_uid');
+            if (!id) {
+              id = (crypto && crypto.randomUUID) ? crypto.randomUUID() : Math.random().toString(36).slice(2);
+              localStorage.setItem('paws_uid', id);
+            }
+            return id;
+          } catch (e) {
+            // Fallback if localStorage disabled
+            return Math.random().toString(36).slice(2);
+          }
+        }
+        const userId = getOrCreateId();
+
+        let items = {};
+        let searchTimeout;
+        let pendingRequest = null; // { request_id, item_key, item_name }
+
+        // Category → map rect ID mapping
+        const CATEGORY_TO_RECT_ID = {
+          "Produce": "map-Produce",
+          "Dairy": "map-Dairy",
+          "Bakery": "map-Bakery",
+          "Meat & Poultry": "map-Meat & Poultry",
+          "Pantry": "map-Pantry",
+          "Beverages": "map-Beverages",
+          "Frozen": "map-Frozen",
+          "Snacks": "map-Snacks"
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            socket.emit('join_mode', { mode: mode, user_id: userId });
+            loadItems();
+
+            document.getElementById('searchInput').addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(loadItems, 200);
+            });
+        });
+
+        socket.on('new_request', function(data) {
+  if (mode === 'helper') {
+    notifyUserAttention(); // <— ding + tiny vibrate
+    showNotification('Request: ' + data.item_name + ' (tap to open)', 'info', () => {
+      openRequestModal({ request_id: data.request_id, item_key: data.item_key, item_name: data.item_name });
+    });
+  }
+});
+
+socket.on('request_answered', function(data) {
+  if (mode === 'seeker') {
+    notifyUserAttention(); // <— ding + tiny vibrate
+    const status = data.available ? 'Available' : 'Not Available';
+    showNotification(data.item.name + ' - ' + status, 'info');
+  }
+});
+
+        // Socket events
+        socket.on('mode_joined', function() {
+            showNotification('Connected', 'success');
+        });
+
+        socket.on('item_updated', function(data) {
+            items[data.item_key] = data.item;
+            renderItems();
+        });
+
+        socket.on('new_request', function(data) {
+            if (mode === 'helper') {
+                // Make a clickable toast to open modal
+                showNotification('Request: ' + data.item_name + ' (tap to open)', 'info', () => {
+                    openRequestModal({ request_id: data.request_id, item_key: data.item_key, item_name: data.item_name });
+                });
+            }
+        });
+
+        socket.on('request_answered', function(data) {
+            if (mode === 'seeker') {
+                const status = data.available ? 'Available' : 'Not Available';
+                showNotification(data.item.name + ' - ' + status, 'info');
+            }
+        });
+
+        // Load items
+        function loadItems() {
+            const search = document.getElementById('searchInput').value;
+            fetch(`/api/items?search=${encodeURIComponent(search)}`)
+                .then(response => response.json())
+                .then(data => {
+                    items = data;
+                    renderItems();
+                })
+                .catch(() => {
+                    itemsContainer.innerHTML = '<div class="empty-state">Could not load items.</div>';
+                });
+        }
+
+        // Render items
+       function renderItems() {
+  const container = itemsContainer;
+  const entries = Object.entries(items).sort((a, b) => a[1].name.localeCompare(b[1].name));
+
+  if (entries.length === 0) {
+    container.innerHTML = '<div class="empty-state">No items found</div>';
+    return;
+  }
+
+  const html = entries.map(([key, item]) => {
+    let statusClass = 'unknown', statusSymbol = '?';
+    if (item.available === true) { statusClass = 'available'; statusSymbol = '✓'; }
+    else if (item.available === false) { statusClass = 'unavailable'; statusSymbol = '✗'; }
+
+    const meta = item.category ? `<div class="item-meta">${item.category}</div>` : '';
+
+    const actions = (mode === 'helper')
+      ? `<div class="helper-controls">
+           <button class="status-btn available" onclick="updateStatus('${key}', true)">✓</button>
+           <button class="status-btn unavailable" onclick="updateStatus('${key}', false)">✗</button>
+         </div>`
+      : `<button class="ask-btn" onclick="askForItem('${key}', this)">Ask</button>`;
+
+    return `
+      <div class="item">
+        <div class="item-left">
+          <div class="status-indicator ${statusClass}">${statusSymbol}</div>
+          <div>
+            <div class="item-name">${item.name}</div>
+            ${meta}
+          </div>
+        </div>
+        <div class="item-actions">${actions}</div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = html;
+}
+
+        // Ask for item (seeker mode)
+        function askForItem(itemKey, btnEl) {
+            const item = items[itemKey];
+            if (!item) return;
+
+            // Prevent spam clicking briefly
+            if (btnEl) { btnEl.disabled = true; setTimeout(() => { btnEl.disabled = false; }, 1500); }
+
+            fetch('/api/request', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ item_name: item.name, seeker_id: userId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) showNotification('Asked for ' + item.name, 'success');
+                else showNotification(data.error || 'Error', 'error');
+            })
+            .catch(() => showNotification('Error', 'error'));
+        }
+
+        // Update status (helper mode)
+        function updateStatus(itemKey, available) {
+            fetch(`/api/items/${itemKey}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ available: available, helper_id: userId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    loadItems();
+                    showNotification('Updated', 'success');
+                } else {
+                    showNotification('Error', 'error');
+                }
+            })
+            .catch(() => showNotification('Error', 'error'));
+        }
+
+        // Notification (supports optional onClick for clickable toasts)
+        function showNotification(message, type = 'info', onClick = null) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = 'notification ' + type + ' show';
+
+            if (onClick) {
+                notification.classList.add('clickable');
+                notification.onclick = () => {
+                    onClick();
+                    notification.className = 'notification ' + type;
+                    notification.onclick = null;
+                };
+            } else {
+                notification.classList.remove('clickable');
+                notification.onclick = null;
+            }
+
+            clearTimeout(notification._hideTimer);
+            notification._hideTimer = setTimeout(() => {
+                notification.className = 'notification ' + type;
+                notification.onclick = null;
+            }, onClick ? 6000 : 2500);
+        }
+
+        // Modal control
+        function openRequestModal(req) {
+  pendingRequest = req;
+
+  document.getElementById('modalTitle').textContent = "New Request";
+  document.getElementById('modalItemName').textContent = req.item_name;
+
+  // Clear highlights
+  document.querySelectorAll('.map-section').forEach(el => el.classList.remove('highlight'));
+
+  // Use real category from API
+  const item = items[req.item_key];
+  const categoryName = item && item.category ? item.category : null;
+
+  if (categoryName) {
+    const rectId = CATEGORY_TO_RECT_ID[categoryName];
+    const el = rectId ? document.getElementById(rectId) : null;
+    if (el) el.classList.add('highlight');
+  }
+
+  document.getElementById('requestModalBackdrop').classList.add('show');
+}
+
+        function closeRequestModal() {
+            document.getElementById('requestModalBackdrop').classList.remove('show');
+            pendingRequest = null;
+        }
+
+        function submitRequestAnswer(available) {
+            if (!pendingRequest) return;
+            const key = pendingRequest.item_key;
+
+            fetch(`/api/items/${key}/status`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ available: available, helper_id: userId })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) {
+                    showNotification('Updated', 'success');
+                    loadItems();
+                    closeRequestModal();
+                } else {
+                    showNotification('Error', 'error');
+                }
+            })
+            .catch(() => showNotification('Error', 'error'));
+        }
+
+        // expose modal funcs if needed
+        window.closeRequestModal = closeRequestModal;
+        window.submitRequestAnswer = submitRequestAnswer;
+        window.updateStatus = updateStatus;
+        window.askForItem = askForItem;
+    </script>
+</body>
+</html>
