@@ -3,8 +3,19 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Paws & Go Crowdsourced </title>
+    <title>PawsLive</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+
+
+      <!-- Favicon for browser tab -->
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename='pawslive.ico') }}">
+
+  <!-- Web App icons -->
+  <link rel="apple-touch-icon" sizes="192x192" href="{{ url_for('static', filename='pawslive.png') }}">
+  <link rel="apple-touch-icon" sizes="512x512" href="{{ url_for('static', filename='pawslive.png') }}">
+
+  <script src="{{ url_for('static', filename='paws-buttons.js') }}"></script>
+
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -234,9 +245,52 @@
   background: #fff;   /* force white background */
   border-radius: 0;   /* remove rounded edges if you want no border feel */
 }
+
+
+/* Bootstrap */
+.carousel-indicators { display: none !important; }
+
+/* Swiper.js */
+.swiper-pagination { display: none !important; }
+
+/* Slick */
+.slick-dots { display: none !important; }
+
+/* Generic dots container you may have */
+.slider-dots, .dots, .pagination { display: none !important; }
+
+#miniDots {
+  display: none !important;
+}
+
+.copy-url-btn {
+  display: inline-block;
+  margin: 0 .4rem;
+  padding: .65rem 1.2rem;
+  border: 1px solid #000;
+  border-radius: 6px;
+  background: #fff;
+  color: #000;
+  font-size: .95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .2s ease, color .2s ease;
+}
+
+.copy-url-btn:hover {
+  background: #000;
+  color: #fff;
+}
+
+.copy-url-btn:active {
+  transform: scale(0.98);
+}
+
+
     </style>
 
 <script>
+
 function isWustlEmail(value) {
   return typeof value === 'string' && /^[^@\s]+@wustl\.edu$/i.test(value.trim());
 }
@@ -535,7 +589,10 @@ window.answerPending = answerPending;
 </head>
 
     <div class="header">
-        <h1>PawsLive: Crowdsourced :)</h1>
+       <h1>
+  <img src="/static/pawslive.png" alt="PawsLive Logo" style="height:32px; vertical-align:middle; margin-right:8px;">
+  PawsLive
+</h1>
         
 
 
@@ -572,9 +629,9 @@ window.answerPending = answerPending;
 
   // Slides (edit paths + captions)
   const SLIDES = [
-    { img: "/static/help/slide1.png", alt: "Overview",  caption: "in seeker mode, you can ask for items to be checked by nearby peers and get notified in site or email" },
-    { img: "/static/help/slide2.png", alt: "Helper mode", caption: "in helper mode, you’ll get pings while near paws and go. enter by scanning qr code at paws or bears den" },
-    { img: "/static/help/slide3.png", alt: "notifications", caption: "the item inventory is up to date and from dining services. crowd sourcing helps build community and keep it live" },
+    { img: "/static/pawslive.png", alt: "overview", caption: "pawslive keeps a crowdsourced inventory of all items at paws & go on the south 40. dd this site as a web-app on your phone by clicking below. if on mac go (safari>file>add to dock)" },
+    { img: "/static/help/slide1.png", alt: "seeker mode",  caption: "in seeker mode, you can ask for items to be checked by nearby peers and get notified in site or email" },
+    { img: "/static/help/slide2.png", alt: "helper mode", caption: "in helper mode, you’ll get pings while near paws and go. enter by scanning qr code at paws or bears den" },
     { img: "/static/help/slide4.png", alt: "questions or ideas", caption: "email questions or billion dollar ideas to pawsliveupdates@gmail.com" }
   ];
 
@@ -630,6 +687,13 @@ window.answerPending = answerPending;
         <footer class="mini-modal__footer">
           <button class="mini-modal__nav" id="miniPrev" aria-label="Previous">‹</button>
           <div class="mini-modal__dots" id="miniDots" aria-label="Slides"></div>
+          
+          <center>
+  <button id="copyUrlBtn" class="copy-url-btn" type="button">Copy URL</button>
+
+  <button id="installBtn" class="copy-url-btn" type="button">Add to Home</button>
+</center>
+          
           <button class="mini-modal__nav" id="miniNext" aria-label="Next">›</button>
         </footer>
       </div>
