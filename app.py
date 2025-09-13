@@ -68,7 +68,7 @@ from email.message import EmailMessage
                                                        
 def sendemailwashu(email, item,status):
     if not status:
-        pass
+        return
 
     email_sender = 'pawsliveupdates@gmail.com'
     email_password = 'xfya sxug ntzj ubth'
@@ -80,14 +80,18 @@ def sendemailwashu(email, item,status):
     msg['To'] = email 
     
     
+    from zoneinfo import ZoneInfo  # Python 3.9+
     plural = "was" if item[-1]!="s" else "were"
     status_text = "Available"
-    timestamp = datetime.now().strftime("%I:%M %p (%b %d, %Y)")  # e.g. 06:47 PM (Sep 12, 2025)
-    email_body =  f"""
-{item.title()} {plural} reported as Available at Paws & Go at {timestamp}
-
-Note: This is based on a helper’s report and may not be a guarantee. Not officially affliated with WashU.
-        """
+    CENTRAL = ZoneInfo("America/Chicago")
+    timestamp = datetime.now(CENTRAL).strftime("%I:%M %p (%b %d, %Y)")  # e.g. 06:47 PM (Sep 12, 2025)
+    email_body = (
+    f"{item.title()} {plural} reported as Available at Paws & Go at {timestamp}\n\n"
+    "Note: This is based on a helper’s report and may not be a guarantee. "
+    "Not officially affiliated with WashU.\n\n"
+    "Tip: To make sure updates don’t land in your junk folder, add "
+    "pawsliveupdates@gmail.com to your contacts or move our email to inbox."
+)
 
     msg.set_content(email_body, subtype='html')
 
