@@ -197,7 +197,208 @@
     grid-template-columns: 1fr;
   }
 }
+
+.requests-list { display: grid; gap: .6rem; }
+.req-card {
+  border:1px solid #e5e5e5; border-radius:6px; padding:.75rem;
+  display:flex; align-items:center; justify-content:space-between; gap:.8rem;
+}
+.req-main { display:flex; flex-direction:column; gap:.2rem; }
+.req-title { font-weight:600; }
+.req-meta { color:#666; font-size:.9rem; }
+
+.email-row { margin-top:.6rem; }
+.email-label { display:block; font-size:.9rem; color:#555; margin-bottom:.3rem; }
+.email-input-wrap { display:flex; gap:.5rem; }
+.email-input {
+  flex:1; padding:.68rem .9rem; font-size:.95rem; border:1px solid #d4d4d4; border-radius:4px;
+}
+.email-input:focus { outline:none; border-color:#000; }
+.email-help { font-size:.85rem; margin-top:.25rem; color:#666; }
+.email-help.error { color:#b00020; }
     </style>
+
+<script>
+
+function isWustlEmail(value) {
+  return typeof value === 'string' && /^[^@\s]+@wustl\.edu$/i.test(value.trim());
+}
+function getSavedEmail() {
+  try { return localStorage.getItem('paws_email') || ''; } catch { return ''; }
+}
+function saveEmailLocal(value) {
+  try { localStorage.setItem('paws_email', value.trim()); } catch {}
+}
+function removeEmailLocal() {
+  try { localStorage.removeItem('paws_email'); } catch {}
+}
+
+
+
+
+document.addEventListener('DOMContentLoaded', function() {
+  socket.emit('join_mode', { mode: mode, user_id: userId });
+  loadItems();
+
+  document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(loadItems, 200);
+  });
+
+  if (mode === 'seeker') {
+  const emailRow = document.getElementById('emailRow');
+  const emailInput = document.getElementById('seekerEmail');
+  const emailHelp = document.getElementById('emailHelp');
+  const saveBtn = document.getElementById('saveEmailBtn');
+  const removeBtn = document.getElementById('removeEmailBtn');
+
+  emailRow.style.display = 'block';
+  const existing = getSavedEmail();
+  if (existing) emailInput.value = existing;
+
+  saveBtn.addEventListener('click', () => {
+    const val = emailInput.value.trim();
+    if (!isWustlEmail(val)) {
+      emailHelp.textContent = 'Please enter a valid @wustl.edu email.';
+      emailHelp.classList.add('error');
+      showNotification('Invalid email. Must end with @wustl.edu', 'error');
+      return;
+    }
+    emailHelp.textContent = 'Saved.';
+    emailHelp.classList.remove('error');
+    saveEmailLocal(val);
+    showNotification('Email saved', 'success');
+  });
+
+  removeBtn.addEventListener('click', () => {
+    emailInput.value = '';
+    removeEmailLocal();
+    emailHelp.textContent = 'Removed.';
+    emailHelp.classList.remove('error');
+    showNotification('Email removed', 'success');
+  });
+}
+
+});
+
+function askForItem(itemKey, btnEl) {
+  const item = items[itemKey];
+  if (!item) return;
+
+  if (btnEl) { btnEl.disabled = true; setTimeout(() => { btnEl.disabled = false; }, 1500); }
+
+  let seekerEmail = '';
+  if (mode === 'seeker') {
+    const emailVal = document.getElementById('seekerEmail').value.trim();
+    if (emailVal && isWustlEmail(emailVal)) {
+      seekerEmail = emailVal;
+      saveEmailLocal(seekerEmail);
+    }
+  }
+
+  fetch('/api/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item_name: item.name, seeker_id: userId, seeker_email: seekerEmail })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) showNotification('Asked for ' + item.name, 'success');
+    else showNotification(data.error || 'Error', 'error');
+  })
+  .catch(() => showNotification('Error', 'error'));
+}
+
+//newscript again
+
+
+    function openPendingModal() {
+  refreshPending();
+  document.getElementById('pendingModalBackdrop').classList.add('show');
+}
+function closePendingModal() {
+  document.getElementById('pendingModalBackdrop').classList.remove('show');
+}
+
+function refreshPending() {
+  fetch(`/api/pending-requests?hours=3`)
+    .then(r => r.json())
+    .then(list => renderPending(list))
+    .catch(() => {
+      document.getElementById('pendingList').innerHTML = '<div class="empty-state">Could not load pending requests.</div>';
+    });
+}
+
+function renderPending(list) {
+  const el = document.getElementById('pendingList');
+  if (!Array.isArray(list) || list.length === 0) {
+    el.innerHTML = '<div class="empty-state">No pending requests in the last 3 hours.</div>';
+    return;
+  }
+  el.innerHTML = list.map(r => {
+    const age = timeAgo(r.created_at);
+    const cat = (r.item && r.item.category) ? ` · ${r.item.category}` : '';
+    // Buttons answer via your existing endpoint and will auto-remove from the list on refresh
+    return `
+      <div class="req-card">
+        <div class="req-main">
+          <div class="req-title">${r.item_name}</div>
+          <div class="req-meta">${age}${cat}</div>
+        </div>
+        <div style="display:flex; gap:.4rem;">
+          <button class="status-btn available" title="Mark Available" onclick="answerPending('${r.item_key}', true)">✓</button>
+          <button class="status-btn unavailable" title="Mark Not Available" onclick="answerPending('${r.item_key}', false)">✗</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function answerPending(itemKey, available) {
+  // Use your existing update endpoint
+  fetch(`/api/items/${itemKey}/status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ available: available, helper_id: userId })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      showNotification('Updated', 'success');
+      // Refresh list to remove the now-answered request(s)
+      refreshPending();
+      // Also keep the main list fresh
+      loadItems();
+    } else {
+      showNotification(d.error || 'Error', 'error');
+    }
+  })
+  .catch(() => showNotification('Error', 'error'));
+}
+
+// tiny "2m ago" helper (if not already present)
+function timeAgo(iso) {
+  if (!iso) return '';
+  const t = new Date(iso);
+  const s = Math.floor((Date.now() - t.getTime())/1000);
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s/60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m/60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h/24);
+  return `${d}d ago`;
+}
+
+window.openPendingModal = openPendingModal;
+window.closePendingModal = closePendingModal;
+window.refreshPending = refreshPending;
+window.answerPending = answerPending;
+//new script
+
+
+
+</script>
 
     <script>
   // ... your existing globals ...
@@ -325,11 +526,41 @@
         </div>
     </div>
 
+    <div class="modal-backdrop" id="pendingModalBackdrop">
+  <div class="modal" style="width:min(640px,95vw)">
+    <div class="modal-header">
+      <div class="modal-title">Pending Requests</div>
+      <button class="modal-close" onclick="closePendingModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="pendingList" class="requests-list"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="refreshPending()">Refresh</button>
+      <button class="btn" onclick="closePendingModal()">Close</button>
+    </div>
+  </div>
+</div>
+
 <body>
     <div class="search-container">
   <div class="search-row">
     <input type="text" class="search-input" id="searchInput" placeholder="Search items..." />
 
+    <!-- Email capture for seekers -->
+  <div id="emailRow" class="email-row" style="display:none;">
+  <label for="seekerEmail" class="email-label">Notification email (@wustl.edu only):</label>
+  <div class="email-input-wrap">
+    <input type="email" id="seekerEmail" class="email-input" placeholder="yourname@wustl.edu" inputmode="email" />
+    <button class="ask-btn" id="saveEmailBtn">Save</button>
+    <button class="ask-btn" id="removeEmailBtn" style="background:#fff;color:#000;border:1px solid #000;">Remove</button>
+  </div>
+  <div id="emailHelp" class="email-help"></div>
+</div>
+
+    <button class="ask-btn" id="pendingBtn" style="display:none;">Pending Requests</button>
+  </div>
+</div>
     <!--
         <select id="categorySelect" class="category-select" aria-label="Filter by category">
       <option value="">All</option>
@@ -395,6 +626,24 @@
     </div>
 
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+  socket.emit('join_mode', { mode: mode, user_id: userId });
+  loadItems();
+
+  document.getElementById('searchInput').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(loadItems, 200);
+  });
+
+  // Show "Pending Requests" button for helpers
+  if (mode === 'helper') {
+    const btn = document.getElementById('pendingBtn');
+    btn.style.display = 'inline-block';
+    btn.addEventListener('click', openPendingModal);
+  }
+});
+
+
 
         // ---- Haptics + sound ----
 let audioCtx = null;
@@ -588,27 +837,6 @@ socket.on('request_answered', function(data) {
 
   container.innerHTML = html;
 }
-
-        // Ask for item (seeker mode)
-        function askForItem(itemKey, btnEl) {
-            const item = items[itemKey];
-            if (!item) return;
-
-            // Prevent spam clicking briefly
-            if (btnEl) { btnEl.disabled = true; setTimeout(() => { btnEl.disabled = false; }, 1500); }
-
-            fetch('/api/request', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ item_name: item.name, seeker_id: userId })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) showNotification('Asked for ' + item.name, 'success');
-                else showNotification(data.error || 'Error', 'error');
-            })
-            .catch(() => showNotification('Error', 'error'));
-        }
 
         // Update status (helper mode)
         function updateStatus(itemKey, available) {
