@@ -28,32 +28,8 @@
     });
   }
 
-  // INSTALL APP BUTTON
-  let deferredPrompt = null;
-
-  window.addEventListener("beforeinstallprompt", (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-  });
-
-  function setupInstallButton() {
-    const installBtn = document.getElementById("installBtn");
-    if (!installBtn) return;
-
-    installBtn.addEventListener("click", async () => {
-      if (!deferredPrompt) {
-        alert("Install not available right now — try Chrome/Android or Safari on iOS.");
-        return;
-      }
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-    });
-  }
-
   // INIT once DOM is ready
   document.addEventListener("DOMContentLoaded", () => {
     setupCopyButton();
-    setupInstallButton();
   });
 })();

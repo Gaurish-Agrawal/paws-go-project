@@ -265,16 +265,16 @@
 
 .copy-url-btn {
   display: inline-block;
-  margin: 0 .4rem;
-  padding: .65rem 1.2rem;
+  margin: 0 .3rem;
+  padding: .4rem .8rem;     /* smaller padding */
   border: 1px solid #000;
-  border-radius: 6px;
+  border-radius: 4px;       /* slightly tighter radius */
   background: #fff;
   color: #000;
-  font-size: .95rem;
+  font-size: .8rem;         /* smaller text */
   font-weight: 500;
   cursor: pointer;
-  transition: background .2s ease, color .2s ease;
+  transition: background .2s ease, color .2s ease, transform .1s ease;
 }
 
 .copy-url-btn:hover {
@@ -283,7 +283,7 @@
 }
 
 .copy-url-btn:active {
-  transform: scale(0.98);
+  transform: scale(0.97);
 }
 
 
@@ -586,6 +586,56 @@ window.answerPending = answerPending;
   }
 </script>
 
+<script>
+function showInstallHelp() {
+  const ua = navigator.userAgent || navigator.vendor || "";
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isMacSafari = /Macintosh/i.test(ua) && /Safari/i.test(ua) && !/Chrome/i.test(ua);
+  const isAndroid = /Android/i.test(ua);
+  const isChrome = /Chrome/i.test(ua) && !/Edge|OPR|Brave/i.test(ua);
+
+  let msg = "";
+
+  if (isIOS) {
+    msg =
+      "Install on iPhone/iPad:\n" +
+      "1) Open in Safari\n" +
+      "2) Share (square with ↑)\n" +
+      "3) Add to Home Screen";
+  } else if (isMacSafari) {
+    msg =
+      "Install on Mac (Safari):\n" +
+      "1) Safari menu → File\n" +
+      "2) Add to Dock…\n" +
+      "3) Name it and Add";
+  } else if (isAndroid && isChrome) {
+    msg =
+      "Install on Android (Chrome):\n" +
+      "1) Menu (⋮)\n" +
+      "2) Add to Home screen (or Install app)\n" +
+      "3) Confirm";
+  } else if (isChrome) {
+    msg =
+      "Install on Android (Chrome):\n" +
+      "1) Menu (⋮)\n" +
+      "2) Cast, Save, and Share\n" +
+      "3) Install Page as App";
+  } else {
+    msg =
+      "Install as a web app:\n" +
+      "- On iPhone/iPad (Safari): Share → Add to Home Screen\n" +
+      "- On Android (Chrome): Menu (⋮) → Add to Home screen\n" +
+      "- On Mac (Safari): File → Add to Dock…\n" +
+      "- On Desktop (Chrome): Address bar ➕ or Menu → Install app";
+  }
+
+  alert(msg);
+}
+
+// Example: wire it to a button
+// document.getElementById("installHelpBtn").addEventListener("click", showInstallHelp);
+</script>
+
 </head>
 
     <div class="header">
@@ -669,7 +719,7 @@ window.answerPending = answerPending;
     @keyframes pop{from{transform:scale(.985);opacity:.65}to{transform:scale(1);opacity:1}}
   }`;
   const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
-
+  
   // Build modal once
   const modal = document.createElement('div');
   modal.className = 'mini-modal'; modal.id = 'miniHelpModal'; modal.hidden = true;
@@ -691,7 +741,7 @@ window.answerPending = answerPending;
           <center>
   <button id="copyUrlBtn" class="copy-url-btn" type="button">Copy URL</button>
 
-  <button id="installBtn" class="copy-url-btn" type="button">Add to Home</button>
+  <button id="installBtn" class="copy-url-btn" type="button" onclick="showInstallHelp()">Add to Home</button>
 </center>
           
           <button class="mini-modal__nav" id="miniNext" aria-label="Next">›</button>
