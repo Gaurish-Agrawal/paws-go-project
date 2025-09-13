@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Paws & Go Tracker</title>
+    <title>Paws & Go Crowdsourced </title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
@@ -33,10 +33,9 @@
 }
 
         .mode-indicator {
-            background:#000; color:#fff; padding:.4rem 1rem; border-radius:4px;
+            background:#000; color:#fff; padding:.4rem 1rem; border-radius:0px;
             font-size:.8rem; margin-top:.5rem; display:inline-block; font-weight:500;
         }
-        .mode-indicator.helper { background:#000; }
 
         .search-container {
             padding:1rem; background:#fff; border-bottom:1px solid #e5e5e5;
@@ -216,10 +215,28 @@
 .email-input:focus { outline:none; border-color:#000; }
 .email-help { font-size:.85rem; margin-top:.25rem; color:#666; }
 .email-help.error { color:#b00020; }
+
+/* Make toast ignore clicks unless clickable */
+.notification { pointer-events: none; }
+.notification.clickable { pointer-events: auto; }
+
+/* Smaller slideshow image */
+.mini-modal__body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mini-modal__img {
+  display: block;
+  margin: 0 auto;
+  object-fit: contain;
+  background: #fff;   /* force white background */
+  border-radius: 0;   /* remove rounded edges if you want no border feel */
+}
     </style>
 
 <script>
-
 function isWustlEmail(value) {
   return typeof value === 'string' && /^[^@\s]+@wustl\.edu$/i.test(value.trim());
 }
@@ -259,12 +276,10 @@ document.addEventListener('DOMContentLoaded', function() {
   saveBtn.addEventListener('click', () => {
     const val = emailInput.value.trim();
     if (!isWustlEmail(val)) {
-      emailHelp.textContent = 'Please enter a valid @wustl.edu email.';
       emailHelp.classList.add('error');
-      showNotification('Invalid email. Must end with @wustl.edu', 'error');
+      showNotification('Must be @wustl.edu', 'error');
       return;
     }
-    emailHelp.textContent = 'Saved.';
     emailHelp.classList.remove('error');
     saveEmailLocal(val);
     showNotification('Email saved', 'success');
@@ -520,16 +535,180 @@ window.answerPending = answerPending;
 </head>
 
     <div class="header">
-        <h1>Paws Crowdsourced</h1>
-        <div class="mode-indicator {{ 'helper' if mode == 'helper' else '' }}" id="modeIndicator">
-            {{ mode.title() }} Mode
+        <h1>PawsLive: Crowdsourced :)</h1>
+        
+
+
+
+
+<!-- Replace your current div with this BUTTON -->
+<button
+  class="mode-indicator {{ 'helper' if mode == 'helper' else '' }}"
+  id="modeIndicatorBtn"
+  type="button"
+  aria-haspopup="dialog"
+  aria-controls="miniHelpModal"
+  style="
+    border: 1px solid gray;
+    background: #ffffff;
+    padding: 6px 14px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    box-shadow: 2px 2px 0 #000; /* hard offset shadow for boxy 3D look */
+  "
+>
+  {{ mode.title() }}
+</button>
+
+<script>
+/* ================== Minimal Slideshow Popup (button-triggered, robust) ================== */
+(() => {
+  if (window.__miniHelpInit3) return;
+  window.__miniHelpInit3 = true;
+
+  const TRIGGER_ID = "modeIndicatorBtn";           // <-- define this
+  const TRIGGER_SELECTOR = `#${TRIGGER_ID}`;
+
+  // Slides (edit paths + captions)
+  const SLIDES = [
+    { img: "/static/help/slide1.png", alt: "Overview",  caption: "in seeker mode, you can ask for items to be checked by nearby peers and get notified in site or email" },
+    { img: "/static/help/slide2.png", alt: "Helper mode", caption: "in helper mode, you’ll get pings while near paws and go. enter by scanning qr code at paws or bears den" },
+    { img: "/static/help/slide3.png", alt: "notifications", caption: "the item inventory is up to date and from dining services. crowd sourcing helps build community and keep it live" },
+    { img: "/static/help/slide4.png", alt: "questions or ideas", caption: "email questions or billion dollar ideas to pawsliveupdates@gmail.com" }
+  ];
+
+  // Inject minimal CSS (uses TRIGGER_ID safely)
+  const css = `
+  #${TRIGGER_ID}{
+    appearance:none;-webkit-appearance:none;border:0;background:transparent;
+    cursor:pointer; padding:.35rem .6rem; border-radius:999px;
+    font:600 14px/1 system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    color:#222; background:#f3f4f6; border:1px solid #e5e7eb;
+  }
+  #${TRIGGER_ID}.helper{ background:#e6f7ee; border-color:#b7e3c7; color:#14532d }
+  #${TRIGGER_ID}:focus{ outline:2px solid #94a3b8; outline-offset:2px }
+
+  .mini-modal[hidden]{display:none}
+  .mini-modal__backdrop{position:fixed;inset:0;background:rgba(0,0,0,.42);
+    display:grid;place-items:center;z-index:2001}
+  .mini-modal__card{width:min(92vw,560px);background:#fff;border-radius:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.16);overflow:hidden;display:grid;grid-template-rows:auto 1fr auto}
+  .mini-modal__header{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid #eee}
+  .mini-modal__title{margin:0;font:600 16px/1.2 system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#222}
+  .mini-modal__close{border:0;background:transparent;font-size:22px;color:#666;cursor:pointer;padding:2px 6px}
+  .mini-modal__close:hover{color:#000}
+  .mini-modal__body{padding:12px}
+  .mini-modal__img{display:block;width:100%;height:auto;border-radius:10px;background:#fafafa}
+  .mini-modal__cap{margin:8px 8px 0;text-align:center;font:400 14px/1.35 system-ui,-apple-system,Segoe UI,Roboto,Arial;color:#6a6a6a}
+  .mini-modal__footer{display:grid;grid-template-columns:48px 1fr 48px;align-items:center;gap:6px;padding:10px 12px;border-top:1px solid #eee}
+  .mini-modal__nav{border:1px solid #e6e6e6;background:#fff;border-radius:8px;height:36px;font-size:18px;cursor:pointer}
+  .mini-modal__nav:hover{background:#f7f7f7}
+  .mini-modal__dots{display:flex;justify-content:center;gap:6px}
+  .mini-modal__dot{width:8px;height:8px;border-radius:50%;border:0;background:#d9d9d9}
+  .mini-modal__dot[aria-current="true"]{background:#7b7b7b}
+  @media (prefers-reduced-motion:no-preference){
+    .mini-modal__card{animation:pop .16s ease-out}
+    @keyframes pop{from{transform:scale(.985);opacity:.65}to{transform:scale(1);opacity:1}}
+  }`;
+  const style = document.createElement('style'); style.textContent = css; document.head.appendChild(style);
+
+  // Build modal once
+  const modal = document.createElement('div');
+  modal.className = 'mini-modal'; modal.id = 'miniHelpModal'; modal.hidden = true;
+  modal.innerHTML = `
+    <div class="mini-modal__backdrop" id="miniBackdrop">
+      <div class="mini-modal__card" role="dialog" aria-modal="true" aria-labelledby="miniTitle">
+        <header class="mini-modal__header">
+          <h3 id="miniTitle" class="mini-modal__title">How it works</h3>
+          <button class="mini-modal__close" id="miniClose" aria-label="Close">×</button>
+        </header>
+        <div class="mini-modal__body">
+          <img id="miniImg" class="mini-modal__img" alt="">
+          <p id="miniCap" class="mini-modal__cap"></p>
         </div>
+        <footer class="mini-modal__footer">
+          <button class="mini-modal__nav" id="miniPrev" aria-label="Previous">‹</button>
+          <div class="mini-modal__dots" id="miniDots" aria-label="Slides"></div>
+          <button class="mini-modal__nav" id="miniNext" aria-label="Next">›</button>
+        </footer>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+
+  // Wire up
+  const closeBtn= modal.querySelector('#miniClose');
+  const backdrop= modal.querySelector('#miniBackdrop');
+  const imgEl   = modal.querySelector('#miniImg');
+  const capEl   = modal.querySelector('#miniCap');
+  const dotsEl  = modal.querySelector('#miniDots');
+  const prevBtn = modal.querySelector('#miniPrev');
+  const nextBtn = modal.querySelector('#miniNext');
+
+  let i = 0, lastFocus = null;
+
+  function renderDots(){
+    dotsEl.innerHTML = '';
+    SLIDES.forEach((_, k) => {
+      const d = document.createElement('button');
+      d.className = 'mini-modal__dot';
+      if (k === i) d.setAttribute('aria-current','true');
+      d.addEventListener('click', () => { i = k; renderSlide(); });
+      dotsEl.appendChild(d);
+    });
+  }
+  function renderSlide(){
+    const s = SLIDES[i];
+    imgEl.src = s.img; imgEl.alt = s.alt || '';
+    capEl.textContent = s.caption || '';
+    [...dotsEl.children].forEach((d, k) => d.toggleAttribute('aria-current', k === i));
+  }
+  function openModal(){
+    lastFocus = document.activeElement;
+    modal.hidden = false;
+    i = 0; renderDots(); renderSlide();
+    closeBtn.focus();
+    document.addEventListener('keydown', onKey);
+  }
+  function closeModal(){
+    modal.hidden = true;
+    document.removeEventListener('keydown', onKey);
+    if (lastFocus) lastFocus.focus();
+  }
+  function onKey(e){
+    if (e.key === 'Escape') closeModal();
+    if (e.key === 'ArrowRight') next();
+    if (e.key === 'ArrowLeft')  prev();
+  }
+  function next(){ i = (i + 1) % SLIDES.length; renderSlide(); }
+  function prev(){ i = (i - 1 + SLIDES.length) % SLIDES.length; renderSlide(); }
+
+  // Event delegation: survives re-renders
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest(TRIGGER_SELECTOR);
+    if (t) { e.preventDefault(); openModal(); }
+  });
+
+  // Close on × or backdrop click
+  closeBtn.addEventListener('click', closeModal);
+  backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
+
+  // Nav
+  nextBtn.addEventListener('click', next);
+  prevBtn.addEventListener('click', prev);
+})();
+</script>
+
+
+
+
+
     </div>
 
     <div class="modal-backdrop" id="pendingModalBackdrop">
   <div class="modal" style="width:min(640px,95vw)">
     <div class="modal-header">
-      <div class="modal-title">Pending Requests</div>
+      <div class="modal-title">Pending Requests  - so kind :)</div>
       <button class="modal-close" onclick="closePendingModal()">✕</button>
     </div>
     <div class="modal-body">
@@ -545,20 +724,23 @@ window.answerPending = answerPending;
 <body>
     <div class="search-container">
   <div class="search-row">
-    <input type="text" class="search-input" id="searchInput" placeholder="Search items..." />
+    <!-- Wrap your search with the inline help button -->
+<div class="search-with-help">
+  <input type="text" class="search-input" id="searchInput" placeholder="Search items..." />
+  <br>
+  
 
-    <!-- Email capture for seekers -->
-     <br>
+
   <div id="emailRow" class="email-row" style="display:none;">
-  <label for="seekerEmail" class="email-label">Notification email (@wustl.edu only):</label>
   <div class="email-input-wrap">
-    <input type="email" id="seekerEmail" class="email-input" placeholder="yourname@wustl.edu" inputmode="email" />
+    <input type="email" id="seekerEmail" class="email-input" placeholder="Notify Me (name@wustl.edu)" inputmode="email" />
     <button class="ask-btn" id="saveEmailBtn">Save</button>
-    <button class="ask-btn" id="removeEmailBtn" style="background:#fff;color:#000;border:1px solid #000;">Remove</button>
+    <button class="ask-btn" id="removeEmailBtn" style="background:#fff;color:#000;border:1px solid #000;">Drop</button>
   </div>
   <div id="emailHelp" class="email-help"></div>
 </div>
 
+<br>
     <button class="ask-btn" id="pendingBtn" style="display:none;">Pending Requests</button>
   </div>
 </div>
@@ -569,6 +751,7 @@ window.answerPending = answerPending;
 -->
   </div>
 </div>
+
 
     <div class="items-container" id="itemsContainer">
         <div class="loading">Loading items...</div>
