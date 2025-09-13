@@ -85,15 +85,24 @@ def sendemailwashu(email, item,status):
     status_text = "Available"
     CENTRAL = ZoneInfo("America/Chicago")
     timestamp = datetime.now(CENTRAL).strftime("%I:%M %p (%b %d, %Y)")  # e.g. 06:47 PM (Sep 12, 2025)
-    email_body = (
+    
+    plain_body = (
     f"{item.title()} {plural} reported as Available at Paws & Go at {timestamp}\n\n"
-    "Note: This is based on a helper’s report and may not be a guarantee. "
-    "Pawslive.renderapp.com is not officially affiliated with WashU.\n\n"
-    "Tip: To make sure updates don’t land in your junk folder, add "
+    "Note: This is based on a helper’s report and may not be a guarantee.\n\n"
+    "Pawslive.onrender.com is not officially affiliated with WashU. Tip: To make sure updates don’t land in your junk folder, add "
     "pawsliveupdates@gmail.com to your contacts or move our email to inbox."
-)
+    )
+    msg.set_content(plain_body)
 
-    msg.set_content(email_body, subtype='html')
+    # HTML version
+    html_body = f"""
+    <p><b>{item.title()} {plural}</b> reported as Available at Paws & Go at {timestamp}</p>
+    <p><i>Note:</i> This is based on a helper’s report and may not be a guarantee.<br>
+    Pawslive.onrender.com is not officially affiliated with WashU.</p>
+    <p><b>Tip:</b> To make sure updates don’t land in your junk folder, add
+    pawsliveupdates@gmail.com to your contacts or move our email to inbox.</p>
+    """
+    msg.add_alternative(html_body, subtype="html")
 
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
         smtp.login(email_sender, email_password)
