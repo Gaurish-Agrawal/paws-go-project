@@ -88,7 +88,7 @@ def sendemailwashu(email, item,status):
     email_body = (
     f"{item.title()} {plural} reported as Available at Paws & Go at {timestamp}\n\n"
     "Note: This is based on a helper’s report and may not be a guarantee. "
-    "Not officially affiliated with WashU.\n\n"
+    "Pawslive.renderapp.com is not officially affiliated with WashU.\n\n"
     "Tip: To make sure updates don’t land in your junk folder, add "
     "pawsliveupdates@gmail.com to your contacts or move our email to inbox."
 )
