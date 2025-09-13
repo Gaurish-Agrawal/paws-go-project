@@ -678,12 +678,12 @@ function showInstallHelp() {
   const TRIGGER_SELECTOR = `#${TRIGGER_ID}`;
 
   // Slides (edit paths + captions)
-  const SLIDES = [
-    { img: "/static/pawslive.png", alt: "overview", caption: "pawslive keeps a crowdsourced inventory of all items at paws & go on the south 40. dd this site as a web-app on your phone by clicking below. if on mac go (safari>file>add to dock)" },
-    { img: "/static/help/slide1.png", alt: "seeker mode",  caption: "in seeker mode, you can ask for items to be checked by nearby peers and get notified in site or email" },
-    { img: "/static/help/slide2.png", alt: "helper mode", caption: "in helper mode, you’ll get pings while near paws and go. enter by scanning qr code at paws or bears den" },
-    { img: "/static/help/slide4.png", alt: "questions or ideas", caption: "email questions or billion dollar ideas to pawsliveupdates@gmail.com" }
-  ];
+const SLIDES = [
+  { img: "/static/pawslive.png", alt: "Overview", caption: "PawsLive keeps a crowdsourced inventory of items at Paws & Go on the South 40. Add it as a web app on your phone below." },
+  { img: "/static/help/slide1.png", alt: "Seeker Mode", caption: "In Seeker mode, you can request item checks from nearby peers and get notified on site or by email." },
+  { img: "/static/help/slide2.png", alt: "Helper Mode", caption: "In Helper mode, you’ll get pings when near Paws & Go. Enter by scanning the qr code at Paws or Bear’s Den." },
+  { img: "/static/help/slide4.png", alt: "Contact", caption: "Send questions or billion dollar ideas to pawsliveupdates@gmail.com." }
+];
 
   // Inject minimal CSS (uses TRIGGER_ID safely)
   const css = `
