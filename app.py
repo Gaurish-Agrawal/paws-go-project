@@ -97,8 +97,7 @@ def sendemailwashu(email, item,status):
     # HTML version
     html_body = f"""
     <p><b>{item.title()} {plural}</b> reported as Available at Paws & Go at {timestamp}</p>
-    <p><i>Note:</i> This is based on a helper’s report and may not be a guarantee.<br>
-    Pawslive.onrender.com is not officially affiliated with WashU.</p>
+    <p><i>Note:</i> This is based on a helper’s report and may not be a guarantee. Pawslive.onrender.com is not officially affiliated with WashU.</p>
     <p><b>Tip:</b> To make sure updates don’t land in your junk folder, add
     pawsliveupdates@gmail.com to your contacts or move our email to inbox.</p>
     """
