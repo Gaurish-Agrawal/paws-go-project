@@ -1,4 +1,8 @@
-flask
+psycopg[binary]>=3.1
+SQLAlchemy
+Flask
 flask-socketio
+flask-sqlalchemy
 eventlet
 gunicorn
+python-dotenv
