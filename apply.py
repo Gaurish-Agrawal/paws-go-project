@@ -1,3 +1,4 @@
+"""
 from flask import Flask, render_template, request, jsonify, session
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import uuid
@@ -95,12 +96,12 @@ def sendemailwashu(email, item,status):
     msg.set_content(plain_body)
 
     # HTML version
-    html_body = f"""
+    html_body = f"
     <p><b>{item.title()} {plural}</b> reported as Available at Paws & Go at {timestamp}</p>
     <p><i>Note:</i> This is based on a helper’s report and may not be a guarantee. Pawslive.onrender.com is not officially affiliated with WashU.</p>
     <p><b>Tip:</b> To make sure updates don’t land in your junk folder, add
     pawsliveupdates@gmail.com to your contacts or move our email to inbox.</p>
-    """
+    "
     msg.add_alternative(html_body, subtype="html")
 
     with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
@@ -249,7 +250,7 @@ def utcnow_iso():
 
 @app.route('/api/pending-requests')
 def get_pending_requests():
-    """Return all pending requests within a recent window (e.g., last 3 hours)."""
+    "Return all pending requests within a recent window (e.g., last 3 hours)."
     hours = int(request.args.get('hours', '3'))
     cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
 
@@ -282,3 +283,4 @@ def get_pending_requests():
 
 if __name__ == '__main__':
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
+    """
