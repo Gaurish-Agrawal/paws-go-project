@@ -342,6 +342,42 @@
 
 <script>
 
+
+function initCategoryUI() {
+  const categoryBtn  = document.getElementById('categoryBtn');
+  const categoryMenu = document.getElementById('categoryMenu');
+  const categoryChip = document.getElementById('categoryChip');
+
+  if (!categoryBtn || !categoryMenu) return; // safety
+
+  // Toggle dropdown
+  categoryBtn.addEventListener('click', () => {
+    const isHidden = categoryMenu.hasAttribute('hidden');
+    if (isHidden) {
+      categoryMenu.removeAttribute('hidden');
+      categoryBtn.setAttribute('aria-expanded', 'true');
+    } else {
+      categoryMenu.setAttribute('hidden', '');
+      categoryBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  // Close when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.category-filter')) {
+      if (!categoryMenu.hasAttribute('hidden')) {
+        categoryMenu.setAttribute('hidden', '');
+        categoryBtn.setAttribute('aria-expanded', 'false');
+      }
+    }
+  });
+
+  // Save for chip updater
+  window.__categoryChip = categoryChip;
+}
+
+
+
 function isWustlEmail(value) {
   return typeof value === 'string' && /^[^@\s]+@wustl\.edu$/i.test(value.trim());
 }
@@ -385,32 +421,47 @@ document.addEventListener('click', (e) => {
 
 // Build menu from current items (call this after items load)
 function buildCategoryMenuFromItems() {
+  const categoryMenu = document.getElementById('categoryMenu');
   if (!categoryMenu) return;
-  const cats = Array.from(
-    new Set(
-      Object.values(items || {})
-        .map(it => it?.category)
-        .filter(Boolean)
-    )
-  ).sort((a, b) => a.localeCompare(b));
 
-  const buttons = [
+  const cats = Array.from(
+    new Set(Object.values(items || {}).map(it => it?.category).filter(Boolean))
+  ).sort((a,b) => a.localeCompare(b));
+
+  categoryMenu.innerHTML = [
     `<button role="option" data-cat="">All</button>`,
     ...cats.map(c => `<button role="option" data-cat="${c.replace(/"/g,'&quot;')}">${c}</button>`)
   ].join('');
 
-  categoryMenu.innerHTML = buttons;
-
-  // Wire up click handlers
   categoryMenu.querySelectorAll('button').forEach(btn => {
     btn.addEventListener('click', () => {
       currentCategory = btn.dataset.cat || '';
       updateCategoryChip();
-      categoryMenu.setAttribute('hidden', '');
-      categoryBtn.setAttribute('aria-expanded', 'false');
-      renderItems(); // re-render with filter
+      categoryMenu.setAttribute('hidden','');
+      document.getElementById('categoryBtn').setAttribute('aria-expanded','false');
+      renderItems();
     });
   });
+
+  // Optional: re-select currentCategory if it still exists
+  updateCategoryChip();
+}
+
+function updateCategoryChip() {
+  const chip = window.__categoryChip || document.getElementById('categoryChip');
+  if (!chip) return;
+  if (currentCategory) {
+    chip.hidden = false;
+    chip.innerHTML = `${currentCategory} <span class="chip-x" title="Clear">✕</span>`;
+    chip.querySelector('.chip-x').onclick = () => {
+      currentCategory = '';
+      updateCategoryChip();
+      renderItems();
+    };
+  } else {
+    chip.hidden = true;
+    chip.textContent = '';
+  }
 }
 
 function updateCategoryChip() {
@@ -438,6 +489,7 @@ function updateCategoryChip() {
 
 document.addEventListener('DOMContentLoaded', function() {
   socket.emit('join_mode', { mode: mode, user_id: userId });
+  initCategoryUI();
   loadItems();
 
   document.getElementById('searchInput').addEventListener('input', function() {
@@ -644,23 +696,6 @@ window.answerPending = answerPending;
           }).join('');
   }
 
-  // Load items (unchanged), then populate picker
-  function loadItems() {
-      const search = document.getElementById('searchInput').value;
-      fetch(`/api/items?search=${encodeURIComponent(search)}`)
-          .then(response => response.json())
-          .then(data => {
-              items = data;
-              items = data;
-              buildCategoryMenuFromItems();
-              renderItems();
-              renderItems();
-          })
-          .catch(() => {
-              itemsContainer.innerHTML = '<div class="empty-state">Could not load items.</div>';
-          });
-  }
-
  
 
 
@@ -668,8 +703,7 @@ window.answerPending = answerPending;
   const container = itemsContainer;
   const entries = Object.entries(items).sort((a, b) => a[1].name.localeCompare(b[1].name));
 
-  // Apply category filter here
-  const filtered = entries.filter(([key, item]) => {
+  const filtered = entries.filter(([_, item]) => {
     if (!currentCategory) return true;
     return (item.category || '') === currentCategory;
   });
@@ -971,7 +1005,7 @@ const SLIDES = [
   <input type="text" class="search-input" id="searchInput" placeholder="Search items..." />
   <div class="category-filter">
   <button id="categoryBtn" class="ask-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-    Categories ▾
+    Category
   </button>
 
   <div id="categoryMenu" class="category-menu" role="listbox" hidden></div>
@@ -1219,60 +1253,7 @@ socket.on('request_answered', function(data) {
             }
         });
 
-        // Load items
-        function loadItems() {
-            const search = document.getElementById('searchInput').value;
-            fetch(`/api/items?search=${encodeURIComponent(search)}`)
-                .then(response => response.json())
-                .then(data => {
-                    items = data;
-                    renderItems();
-                })
-                .catch(() => {
-                    itemsContainer.innerHTML = '<div class="empty-state">Could not load items.</div>';
-                });
-        }
-
-        // Render items
-       function renderItems() {
-  const container = itemsContainer;
-  const entries = Object.entries(items).sort((a, b) => a[1].name.localeCompare(b[1].name));
-
-  if (entries.length === 0) {
-    container.innerHTML = '<div class="empty-state">No items found</div>';
-    return;
-  }
-
-  const html = entries.map(([key, item]) => {
-    let statusClass = 'unknown', statusSymbol = '?';
-    if (item.available === true) { statusClass = 'available'; statusSymbol = '✓'; }
-    else if (item.available === false) { statusClass = 'unavailable'; statusSymbol = '✗'; }
-
-    const meta = item.category ? `<div class="item-meta">${item.category}</div>` : '';
-
-    const actions = (mode === 'helper')
-      ? `<div class="helper-controls">
-           <button class="status-btn available" onclick="updateStatus('${key}', true)">✓</button>
-           <button class="status-btn unavailable" onclick="updateStatus('${key}', false)">✗</button>
-         </div>`
-      : `<button class="ask-btn" onclick="askForItem('${key}', this)">Ask</button>`;
-
-    return `
-      <div class="item">
-        <div class="item-left">
-          <div class="status-indicator ${statusClass}">${statusSymbol}</div>
-          <div>
-            <div class="item-name">${item.name}</div>
-            ${meta}
-          </div>
-        </div>
-        <div class="item-actions">${actions}</div>
-      </div>
-    `;
-  }).join('');
-
-  container.innerHTML = html;
-}
+        
 
         // Update status (helper mode)
         function updateStatus(itemKey, available) {
@@ -1373,6 +1354,20 @@ socket.on('request_answered', function(data) {
         window.submitRequestAnswer = submitRequestAnswer;
         window.updateStatus = updateStatus;
         window.askForItem = askForItem;
+
+        function loadItems() {
+  const search = document.getElementById('searchInput').value;
+  fetch(`/api/items?search=${encodeURIComponent(search)}`)
+    .then(r => r.json())
+    .then(data => {
+      items = data;
+      buildCategoryMenuFromItems();   // <-- ensure this is called
+      renderItems();
+    })
+    .catch(() => {
+      itemsContainer.innerHTML = '<div class="empty-state">Could not load items.</div>';
+    });
+}
     </script>
 </body>
 </html>
