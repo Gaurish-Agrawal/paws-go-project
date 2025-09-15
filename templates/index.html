@@ -286,6 +286,57 @@
   transform: scale(0.97);
 }
 
+.category-filter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+}
+
+.category-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background: #fff;
+  border: 1px solid #000;
+  box-shadow: 2px 2px 0 #000; /* matches your boxy style */
+  border-radius: 6px;
+  padding: 6px;
+  z-index: 1000;
+}
+
+.category-menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  border: 0;
+  padding: 8px 10px;
+  font: 500 14px/1 system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  cursor: pointer;
+}
+
+.category-menu button:hover { background: #f3f4f6; }
+
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid #000;
+  background: #fff;
+  box-shadow: 2px 2px 0 #000;
+  font: 600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  border-radius: 6px;
+}
+
+.category-chip .chip-x {
+  cursor: pointer;
+  font-weight: 700;
+}
+
 
     </style>
 
@@ -303,6 +354,84 @@ function saveEmailLocal(value) {
 function removeEmailLocal() {
   try { localStorage.removeItem('paws_email'); } catch {}
 }
+
+
+
+
+// === Category filter state ===
+let currentCategory = '';
+
+// Elements (created in HTML above)
+const categoryBtn  = document.getElementById('categoryBtn');
+const categoryMenu = document.getElementById('categoryMenu');
+const categoryChip = document.getElementById('categoryChip');
+
+// Toggle dropdown
+categoryBtn?.addEventListener('click', () => {
+  const isHidden = categoryMenu.hasAttribute('hidden');
+  categoryMenu.toggleAttribute('hidden', !isHidden ? true : false);
+  categoryBtn.setAttribute('aria-expanded', String(isHidden));
+});
+
+// Close when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.category-filter')) {
+    if (!categoryMenu.hasAttribute('hidden')) {
+      categoryMenu.setAttribute('hidden', '');
+      categoryBtn.setAttribute('aria-expanded', 'false');
+    }
+  }
+});
+
+// Build menu from current items (call this after items load)
+function buildCategoryMenuFromItems() {
+  if (!categoryMenu) return;
+  const cats = Array.from(
+    new Set(
+      Object.values(items || {})
+        .map(it => it?.category)
+        .filter(Boolean)
+    )
+  ).sort((a, b) => a.localeCompare(b));
+
+  const buttons = [
+    `<button role="option" data-cat="">All</button>`,
+    ...cats.map(c => `<button role="option" data-cat="${c.replace(/"/g,'&quot;')}">${c}</button>`)
+  ].join('');
+
+  categoryMenu.innerHTML = buttons;
+
+  // Wire up click handlers
+  categoryMenu.querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentCategory = btn.dataset.cat || '';
+      updateCategoryChip();
+      categoryMenu.setAttribute('hidden', '');
+      categoryBtn.setAttribute('aria-expanded', 'false');
+      renderItems(); // re-render with filter
+    });
+  });
+}
+
+function updateCategoryChip() {
+  if (!categoryChip) return;
+  if (currentCategory) {
+    categoryChip.hidden = false;
+    categoryChip.innerHTML = `${currentCategory} <span class="chip-x" title="Clear">✕</span>`;
+    categoryChip.querySelector('.chip-x').onclick = () => {
+      currentCategory = '';
+      updateCategoryChip();
+      renderItems();
+    };
+  } else {
+    categoryChip.hidden = true;
+    categoryChip.textContent = '';
+  }
+}
+
+
+
+
 
 
 
@@ -522,7 +651,9 @@ window.answerPending = answerPending;
           .then(response => response.json())
           .then(data => {
               items = data;
-              populateCategoryPicker();   // << add this
+              items = data;
+              buildCategoryMenuFromItems();
+              renderItems();
               renderItems();
           })
           .catch(() => {
@@ -530,60 +661,54 @@ window.answerPending = answerPending;
           });
   }
 
-  // Render items with category filter + alpha sort
-  function renderItems() {
-      const container = itemsContainer;
-      // filter by category if chosen
-      let entries = Object.entries(items).map(([key, it]) => {
-          // derive category if missing
-          const cat = it.category || FALLBACK_CATEGORY[it.name.toLowerCase()] || '';
-          return [key, {...it, _cat: cat}];
-      });
+ 
 
-      if (selectedCategory) {
-          entries = entries.filter(([, it]) => it._cat === selectedCategory);
-      }
 
-      // alpha sort by name within the filtered set
-      entries.sort((a, b) => a[1].name.localeCompare(b[1].name));
+ function renderItems() {
+  const container = itemsContainer;
+  const entries = Object.entries(items).sort((a, b) => a[1].name.localeCompare(b[1].name));
 
-      if (entries.length === 0) {
-          container.innerHTML = '<div class="empty-state">No items found</div>';
-          return;
-      }
+  // Apply category filter here
+  const filtered = entries.filter(([key, item]) => {
+    if (!currentCategory) return true;
+    return (item.category || '') === currentCategory;
+  });
 
-      const html = entries.map(([key, item]) => {
-          let statusClass = 'unknown', statusSymbol = '?';
-          if (item.available === true) { statusClass = 'available'; statusSymbol = '✓'; }
-          else if (item.available === false) { statusClass = 'unavailable'; statusSymbol = '✗'; }
-
-          const meta = item.category
-  ? `<div class="item-meta">${item.category}</div>`
-  : '';
-
-          const actions = (mode === 'helper')
-              ? `<div class="helper-controls">
-                   <button class="status-btn available" onclick="updateStatus('${key}', true)">✓</button>
-                   <button class="status-btn unavailable" onclick="updateStatus('${key}', false)">✗</button>
-                 </div>`
-              : `<button class="ask-btn" onclick="askForItem('${key}', this)">Ask</button>`;
-
-          return `
-            <div class="item">
-              <div class="item-left">
-                <div class="status-indicator ${statusClass}">${statusSymbol}</div>
-                <div>
-                  <div class="item-name">${item.name}</div>
-                  ${meta}
-                </div>
-              </div>
-              <div class="item-actions">${actions}</div>
-            </div>
-          `;
-      }).join('');
-
-      container.innerHTML = html;
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state">No items found</div>';
+    return;
   }
+
+  const html = filtered.map(([key, item]) => {
+    let statusClass = 'unknown', statusSymbol = '?';
+    if (item.available === true) { statusClass = 'available'; statusSymbol = '✓'; }
+    else if (item.available === false) { statusClass = 'unavailable'; statusSymbol = '✗'; }
+
+    const meta = item.category ? `<div class="item-meta">${item.category}</div>` : '';
+
+    const actions = (mode === 'helper')
+      ? `<div class="helper-controls">
+           <button class="status-btn available" onclick="updateStatus('${key}', true)">✓</button>
+           <button class="status-btn unavailable" onclick="updateStatus('${key}', false)">✗</button>
+         </div>`
+      : `<button class="ask-btn" onclick="askForItem('${key}', this)">Ask</button>`;
+
+    return `
+      <div class="item">
+        <div class="item-left">
+          <div class="status-indicator ${statusClass}">${statusSymbol}</div>
+          <div>
+            <div class="item-name">${item.name}</div>
+            ${meta}
+          </div>
+        </div>
+        <div class="item-actions">${actions}</div>
+      </div>
+    `;
+  }).join('');
+
+  container.innerHTML = html;
+}
 </script>
 
 <script>
@@ -630,6 +755,9 @@ function showInstallHelp() {
   }
 
   alert(msg);
+
+
+  
 }
 
 // Example: wire it to a button
@@ -841,6 +969,16 @@ const SLIDES = [
     <!-- Wrap your search with the inline help button -->
 <div class="search-with-help">
   <input type="text" class="search-input" id="searchInput" placeholder="Search items..." />
+  <div class="category-filter">
+  <button id="categoryBtn" class="ask-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+    Categories ▾
+  </button>
+
+  <div id="categoryMenu" class="category-menu" role="listbox" hidden></div>
+
+  <!-- shows the chosen category; click ✕ to clear -->
+  <span id="categoryChip" class="category-chip" hidden></span>
+</div>
   <br>
   
 
