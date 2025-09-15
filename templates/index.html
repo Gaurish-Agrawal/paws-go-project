@@ -294,6 +294,34 @@
   transform: scale(0.97);
 }
 
+.search-group {
+  display: flex;
+  width: 100%;
+  max-width: 600px;   /* optional */
+}
+
+.search-input {
+  flex: 1;
+  padding: .7rem 1rem;
+  border: 1px solid #d4d4d4;
+  border-right: none;         /* remove right border so button looks attached */
+  border-radius: 4px 0 0 4px; /* rounded only on left */
+  font-size: 1rem;
+}
+
+.category-btn {
+  border: 1px solid #d4d4d4;
+  border-radius: 0 4px 4px 0; /* rounded only on right */
+  background: #f9f9f9;
+  cursor: pointer;
+  padding: 0 .9rem;
+  font-size: 1rem;
+}
+
+.category-btn:hover {
+  background: #eee;
+}
+
 .category-filter {
   position: relative;
   display: inline-flex;
@@ -327,24 +355,6 @@
 }
 
 .category-menu button:hover { background: #f3f4f6; }
-
-.category-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
-  border: 1px solid #000;
-  background: #fff;
-  box-shadow: 2px 2px 0 #000;
-  font: 600 12px/1 system-ui,-apple-system,Segoe UI,Roboto,Arial;
-  border-radius: 6px;
-}
-
-.category-chip .chip-x {
-  cursor: pointer;
-  font-weight: 700;
-}
-
 
     </style>
 
@@ -1009,13 +1019,16 @@ const SLIDES = [
     <div class="search-container">
 
       <div class="search-row">
-  <input type="text" class="search-input" id="searchInput" placeholder="Search items..." />
-  <div class="category-filter">
-    <button id="categoryBtn" class="ask-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
-      Category ▾
+<div class="search-row">
+  <div class="search-group">
+    <input type="text" class="search-input" id="searchInput" placeholder="Search items..." />
+    <button id="categoryBtn" class="category-btn" type="button" aria-haspopup="listbox" aria-expanded="false">
+      ▾
     </button>
-    <div id="categoryMenu" class="category-menu" role="listbox" hidden></div>
-    <span id="categoryChip" class="category-chip" hidden></span>
+  </div>
+
+  <div id="categoryMenu" class="category-menu" role="listbox" hidden></div>
+</div>
   </div>
   <br>
   
