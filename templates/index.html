@@ -51,10 +51,28 @@
         .search-container {
             padding:1rem; background:#fff; border-bottom:1px solid #e5e5e5;
         }
+        
+        
         .search-input {
-            width:100%; padding:.8rem 1.2rem; background:#fff; border:1px solid #d4d4d4;
-            border-radius:4px; font-size:1rem; transition:border-color .2s ease;
-        }
+  flex: 1;
+  padding: .65rem 1rem;
+  border: 1px solid #d4d4d4;
+  border-right: none;             /* remove right border so it merges with button */
+  border-radius: 4px 0 0 4px;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.category-btn {
+  border: 1px solid #d4d4d4;
+  border-radius: 0 4px 4px 0;
+  background: #f9f9f9;
+  font-size: 1rem;
+  line-height: 1.2;
+  padding: .65rem 1rem;           /* same vertical padding as input */
+  cursor: pointer;
+  white-space: nowrap;
+}
         .search-input:focus { outline:none; border-color:#000; }
 
         .items-container {
@@ -1015,7 +1033,6 @@ const SLIDES = [
       Category
     </button>
     <div id="categoryMenu" class="category-menu" role="listbox" hidden></div>
-    <span id="categoryChip" class="category-chip" hidden></span>
   </div>
   <br>
   
